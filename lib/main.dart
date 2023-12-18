@@ -149,7 +149,3 @@ class _MyHomePageState extends State<MyHomePage> {
   *add price range to all the products on serch (in a certin range)/ avarage price
 
    */
-
-
-
-  //this is a test ti see if i can push the changes and how i see it
