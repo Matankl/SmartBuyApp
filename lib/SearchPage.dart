@@ -1,8 +1,8 @@
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'Product.dart';
+import 'Tuple.dart';
 
 class SearchPage extends StatefulWidget {
   @override
@@ -23,9 +23,11 @@ class _SearchPageState extends State<SearchPage> {
   void _incrementQuantity(String barcode) {
     setState(() {
       // Find the index of the product in the productQuantities list
-      int index = productQuantities.indexWhere((tuple) => tuple.item1 == barcode);
+      int index =
+          productQuantities.indexWhere((tuple) => tuple.item1 == barcode);
       if (index != -1) {
-        productQuantities[index] = Tuple2(barcode, productQuantities[index].item2 + 1);
+        productQuantities[index] =
+            Tuple2(barcode, productQuantities[index].item2 + 1);
       } else {
         // If the product is not in the list, add it with quantity 1
         productQuantities.add(Tuple2(barcode, 1));
@@ -48,33 +50,59 @@ class _SearchPageState extends State<SearchPage> {
 //   });
 // }
 
-
 // Method to decrement the quantity of a product in the cart
-void _decrementQuantity(String barcode) {
-  setState(() {
-    // Find the index of the product in the productQuantities list
-    int index = productQuantities.indexWhere((tuple) => tuple.item1 == barcode);
-    if (index != -1) {
-      if (productQuantities[index].item2 > 0) {
-        // If the quantity is greater than 0, decrement the quantity
-        productQuantities[index] = Tuple2(barcode, productQuantities[index].item2 - 1);
-      } else {
-        // If the quantity becomes 0 or less, remove the product from the list
-        productQuantities.removeAt(index);
+  void _decrementQuantity(String barcode) {
+    setState(() {
+      // Find the index of the product in the productQuantities list
+      int index =
+          productQuantities.indexWhere((tuple) => tuple.item1 == barcode);
+      if (index != -1) {
+        if (productQuantities[index].item2 > 0) {
+          // If the quantity is greater than 0, decrement the quantity
+          productQuantities[index] =
+              Tuple2(barcode, productQuantities[index].item2 - 1);
+        } else {
+          // If the quantity becomes 0 or less, remove the product from the list
+          productQuantities.removeAt(index);
+        }
       }
-    }
-  });
-}
+    });
+  }
 
   // Method to add the products with quantities to the cart
-  void _addToCart() {
-    // Implement the logic to send a POST request with productQuantities to the API
-    // ...
+  Future<void> _addToCart(List<Tuple2<String, int>> ListToAdd) async {
+    const apiUrl = 'http://10.0.2.2:8000/api/cart';
 
-    // After successfully adding to the cart, clear the productQuantities
-    setState(() {
-      productQuantities.clear();
-    });
+    final Map<String, dynamic> requestData = Map.fromEntries(
+      productQuantities.map((tuple) => MapEntry(tuple.item1, tuple.item2)),
+    );
+
+    try {
+      final http.Response response = await http.post(
+        Uri.parse(apiUrl),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(requestData),
+      );
+
+      if (response.statusCode == 200) {
+        // Request was successful
+        print('Response: ${response.body}');
+
+        // After successfully adding to the cart, clear the productQuantities
+        setState(() {
+          productQuantities.clear();
+        });
+      } else {
+        // Request failed with an error code
+        print('Failed with status code: ${response.statusCode}');
+        print('Error message: ${response.body}');
+      }
+    } catch (error) {
+      // An error occurred during the request
+      print('Error: $error');
+    }
   }
 
   // Method to search for products based on the provided query
@@ -114,10 +142,11 @@ void _decrementQuantity(String barcode) {
       children: [
         // Search bar section
         Padding(
-          padding: const EdgeInsets.all(8.0), //pading from the sides 
+          padding: const EdgeInsets.all(8.0), //pading from the sides
           child: TextField(
             controller: _searchController,
-            onChanged: (query) { //all the serch methode
+            onChanged: (query) {
+              //all the serch methode
               _searchProducts(query);
             },
             decoration: const InputDecoration(
@@ -132,7 +161,7 @@ void _decrementQuantity(String barcode) {
           child: SingleChildScrollView(
             controller: _scrollController,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center, 
+              mainAxisAlignment: MainAxisAlignment.center,
               children: results
                   .map(
                     (product) => Column(
@@ -153,13 +182,16 @@ void _decrementQuantity(String barcode) {
                                 },
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8.0),
                                 child: Text(
                                   // Display the quantity of the product
                                   productQuantities
                                       .firstWhere(
-                                        (tuple) => tuple.item1 == product.barcode,
-                                        orElse: () => Tuple2(product.barcode, 0),
+                                        (tuple) =>
+                                            tuple.item1 == product.barcode,
+                                        orElse: () =>
+                                            Tuple2(product.barcode, 0),
                                       )
                                       .item2
                                       .toString(),
@@ -187,7 +219,9 @@ void _decrementQuantity(String barcode) {
         ),
         // Add to Cart button
         ElevatedButton(
-          onPressed: _addToCart,
+          onPressed: () async {
+            await _addToCart(productQuantities);
+          },
           child: const Text('ADD TO CART'),
         ),
       ],
@@ -195,10 +229,4 @@ void _decrementQuantity(String barcode) {
   }
 }
 
-// Tuple class to store pairs of values
-class Tuple2<T1, T2> {
-  final T1 item1;
-  final T2 item2;
 
-  Tuple2(this.item1, this.item2);
-}

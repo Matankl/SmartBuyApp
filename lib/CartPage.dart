@@ -1,10 +1,6 @@
-// import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-// import 'package:flutter/material.dart';
-// import 'package:http/http.dart' as http;
-// import 'Product.dart';
-// import 'SearchPage.dart';
-// import 'CartPage.dart';
+import 'package:http/http.dart' as http;
 
 class CartPage extends StatefulWidget {
   @override
@@ -12,45 +8,53 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
-  final ScrollController _scrollController = ScrollController();
-  List<String> items = List.generate(20, (index) => 'Item $index');
+  Map<String, int> products = {};
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
+    fetchData();
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
+  Future<void> fetchData() async {
+    final response = await http.get(Uri.parse('http://10.0.2.2:8000/api/cart'));
 
-  void _onScroll() {
-    if (_scrollController.position.pixels ==
-        _scrollController.position.maxScrollExtent) {
-      // Load more items when reaching the bottom
+    if (response.statusCode == 200) {
       setState(() {
-        items.addAll(List.generate(10, (index) => 'Item ${items.length + index}'));
+        print(response.body);
+        products = Map<String, int>.from(json.decode(response.body));
+        print("somthind so i can know 5555555555555555555");
+        print(products);
       });
+    } else {
+      // Handle error
+      print('Failed to load products');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      controller: _scrollController,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: items
-            .map(
-              (item) => ListTile(
-                title: Text(item),
-              ),
-            )
-            .toList(),
+    return Scaffold(
+      appBar: AppBar(
+       // title: Text('Cart'),
       ),
+      body: products.isEmpty
+          ? Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              itemCount: products.length,
+              itemBuilder: (BuildContext context, int index) {
+                final productId = products.keys.elementAt(index);
+                final quantity = products.values.elementAt(index);
+                return ListTile(
+                  leading: CircleAvatar(
+                    child: Text(productId.substring(0, 2)), // Just for demonstration
+                  ),
+                  title: Text('Product ID: $productId'),
+                  subtitle: Text('Quantity: $quantity'),
+                );
+              },
+            ),
     );
   }
 }
+
